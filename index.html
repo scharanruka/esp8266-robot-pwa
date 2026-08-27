@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <title>Robot Controller</title>
+  <style>
+    body { font-family: sans-serif; background: #0f172a; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; touch-action: manipulation; user-select: none; }
+    #status { padding: 8px 16px; border-radius: 20px; background: #ef4444; font-size: 14px; margin-bottom: 20px; }
+    #status.connected { background: #22c55e; }
+    .grid { display: grid; grid-template-columns: repeat(3, 90px); grid-template-rows: repeat(3, 90px); gap: 12px; }
+    .btn { background: #334155; border: none; border-radius: 16px; color: white; font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center; active: background #0284c7; }
+    .btn:active { background: #0284c7; transform: scale(0.95); }
+    #btnF { grid-column: 2; grid-row: 1; }
+    #btnL { grid-column: 1; grid-row: 2; }
+    #btnS { grid-column: 2; grid-row: 2; background: #dc2626; }
+    #btnR { grid-column: 3; grid-row: 2; }
+    #btnB { grid-column: 2; grid-row: 3; }
+  </style>
+</head>
+<body>
+
+  <div id="status">Disconnected</div>
+
+  <div class="grid">
+    <button class="btn" id="btnF" data-cmd="F">▲</button>
+    <button class="btn" id="btnL" data-cmd="L">◄</button>
+    <button class="btn" id="btnS" data-cmd="S">■</button>
+    <button class="btn" id="btnR" data-cmd="R">►</button>
+    <button class="btn" id="btnB" data-cmd="B">▼</button>
+  </div>
+
+  <script>
+    let ws;
+    const statusEl = document.getElementById('status');
+
+    function connectWS() {
+      ws = new WebSocket('ws://192.168.4.1:81');
+
+      ws.onopen = () => {
+        statusEl.textContent = 'Connected';
+        statusEl.classList.add('connected');
+      };
+
+      ws.onclose = () => {
+        statusEl.textContent = 'Disconnected (Retrying...)';
+        statusEl.classList.remove('connected');
+        setTimeout(connectWS, 2000);
+      };
+    }
+
+    function sendCmd(cmd) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(cmd);
+      }
+    }
+
+    document.querySelectorAll('.btn').forEach(button => {
+      const cmd = button.dataset.cmd;
+      
+      const start = (e) => { e.preventDefault(); sendCmd(cmd); };
+      const end = (e) => { e.preventDefault(); sendCmd('S'); };
+
+      button.addEventListener('touchstart', start);
+      button.addEventListener('touchend', end);
+      button.addEventListener('mousedown', start);
+      button.addEventListener('mouseup', end);
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    connectWS();
+  </script>
+</body>
+</html>
